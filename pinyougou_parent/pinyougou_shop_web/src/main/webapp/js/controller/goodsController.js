@@ -1,5 +1,5 @@
 //控制层
-app.controller('goodsController', function ($scope, $controller, goodsService) {
+app.controller('goodsController', function ($scope, $controller, goodsService, uploadService) {
 
     $controller('baseController', {$scope: $scope});//继承
 
@@ -10,7 +10,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.list = response;
             }
         );
-    }
+    };
 
     //分页
     $scope.findPage = function (page, rows) {
@@ -20,7 +20,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.paginationConf.totalItems = response.total;//更新总记录数
             }
         );
-    }
+    };
 
     //查询实体
     $scope.findOne = function (id) {
@@ -29,27 +29,27 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.entity = response;
             }
         );
-    }
+    };
 
     //保存
-    $scope.save = function () {
-        var serviceObject;//服务层对象
-        if ($scope.entity.id != null) {//如果有ID
-            serviceObject = goodsService.update($scope.entity); //修改
-        } else {
-            serviceObject = goodsService.add($scope.entity);//增加
-        }
-        serviceObject.success(
+    $scope.add = function () {
+
+        // 提取富文本编辑器中的内容
+        $scope.entity.goodsDesc.introduction = editor.html();
+
+        goodsService.add($scope.entity).success(
             function (response) {
                 if (response.success) {
                     //重新查询
-                    $scope.reloadList();//重新加载
+                    alert(response.message);
+                    $scope.entity = {}; // 保存成功后清空组合对象
+                    editor.html(""); // 保存成功后清空富文本编辑器
                 } else {
                     alert(response.message);
                 }
             }
         );
-    }
+    };
 
 
     //批量删除
@@ -63,7 +63,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 }
             }
         );
-    }
+    };
 
     $scope.searchEntity = {};//定义搜索对象
 
@@ -75,6 +75,32 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.paginationConf.totalItems = response.total;//更新总记录数
             }
         );
-    }
+    };
 
-});	
+    // 上传文件
+    $scope.uploadFile = function () {
+        uploadService.uploadFile().success(function (response) {
+            if (response.success) {
+                $scope.image_entity.url = response.message;
+            } else {
+                alert(response.message);
+            }
+        }).error(function () {
+            alert("上传发生错误");
+        });
+    };
+
+    $scope.entity = {goodsDesc: {itemImages: []}};
+    // 添加图片列表数据
+    $scope.add_image_entity = function () {
+        $scope.entity.goodsDesc.itemImages.push($scope.image_entity);
+    };
+    // 删除图片列表记录
+    $scope.remove_image_entity = function (index) {
+        $scope.entity.goodsDesc.itemImages.splice(index,1);
+    };
+
+});
+
+
+    NetSarang_AIO_8in1_Keygen_v1.5_DFoX
