@@ -157,6 +157,34 @@ app.controller('goodsController', function ($scope, $controller, goodsService, u
             $scope.entity.goodsDesc.specificationItems.push({"attributeName": name, "attributeValue": [value]});
         }
 
-    }
+    };
+
+    // 创建sku列表
+    $scope.createItemList = function () {
+        // 初始化itemList
+        $scope.entity.itemList = [{spec: {}, price: 0, num: 99999, status: 0, isDefault: 0}];
+
+        // 获取数据集合（规格及其选项）
+        var specificationItems = $scope.entity.goodsDesc.specificationItems;
+        for (var i = 0; i < specificationItems.length; i++) {
+            // 获得每个规格
+            var column = specificationItems[i].attributeName;
+            // 获得每个规格选项集合
+            var columnValue = specificationItems[i].attributeValue;
+
+            // 进行深克隆
+            var newList = [];
+            for (let j = 0; j < $scope.entity.itemList.length; j++) {
+                var oldRow = $scope.entity.itemList[j];
+
+                for (var k = 0; k < columnValue.length; k++) {
+                    var newRow = JSON.parse(JSON.stringify(oldRow));
+                    newRow.spec[column] = columnValue[k];
+                    newList.push(newRow);
+                }
+            }
+            $scope.entity.itemList = newList;
+        }
+    };
 
 });
