@@ -1,5 +1,5 @@
 //控制层
-app.controller('goodsController', function ($scope, $controller, goodsService) {
+app.controller('goodsController', function ($scope, $controller, goodsService, itemCatService) {
 
     $controller('baseController', {$scope: $scope});//继承
 
@@ -10,7 +10,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.list = response;
             }
         );
-    }
+    };
 
     //分页
     $scope.findPage = function (page, rows) {
@@ -20,7 +20,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.paginationConf.totalItems = response.total;//更新总记录数
             }
         );
-    }
+    };
 
     //查询实体
     $scope.findOne = function (id) {
@@ -29,7 +29,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.entity = response;
             }
         );
-    }
+    };
 
     //保存
     $scope.save = function () {
@@ -49,8 +49,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 }
             }
         );
-    }
-
+    };
 
     //批量删除
     $scope.dele = function () {
@@ -63,7 +62,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 }
             }
         );
-    }
+    };
 
     $scope.searchEntity = {};//定义搜索对象
 
@@ -75,6 +74,32 @@ app.controller('goodsController', function ($scope, $controller, goodsService) {
                 $scope.paginationConf.totalItems = response.total;//更新总记录数
             }
         );
+    };
+
+    // 商品状态
+    $scope.status = ['未审核', '已审核', '审核未通过', '关闭'];
+
+    // 商品分类列表
+    $scope.itemCatList = [];
+    // 加载商品分类列表
+    $scope.findItemCatList = function () {
+        itemCatService.findAll().success(function (response) {
+            for (var i = 0; i < response.length; i++) {
+                $scope.itemCatList[response[i].id] = response[i].name;
+            }
+        })
+    };
+
+    // 审核商品
+    $scope.updateAuditStatus = function (status) {
+        goodsService.updateAuditStatus($scope.selectIds,status).success(function (response) {
+            if (response.success) {
+                $scope.reloadList();
+                $scope.selectIds = [];
+            } else {
+                alert(response.message);
+            }
+        })
     }
 
 });	

@@ -53,7 +53,6 @@ app.controller("baseController", function ($scope) {
                 return list[i];
             }
         }
-
         return null;
     }
 
