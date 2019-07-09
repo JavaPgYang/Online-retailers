@@ -18,6 +18,7 @@ import com.pinyougou.pojo.TbTypeTemplateExample.Criteria;
 import com.pinyougou.sellergoods.service.TypeTemplateService;
 
 import entity.PageResult;
+import org.springframework.data.redis.core.RedisTemplate;
 
 /**
  * 服务实现层
@@ -29,6 +30,9 @@ public class TypeTemplateServiceImpl implements TypeTemplateService {
 
     @Autowired
     private TbTypeTemplateMapper typeTemplateMapper;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Autowired
     private TbSpecificationOptionMapper specificationOptionMapper;
@@ -112,9 +116,27 @@ public class TypeTemplateServiceImpl implements TypeTemplateService {
             }
 
         }
-
         Page<TbTypeTemplate> page = (Page<TbTypeTemplate>) typeTemplateMapper.selectByExample(example);
+
+        // 缓存处理
+        saveToRedis();
+
         return new PageResult(page.getTotal(), page.getResult());
+    }
+
+    /**
+     * 缓存处理
+     */
+    private void saveToRedis() {
+        List<TbTypeTemplate> tbTypeTemplates = findAll();
+        for (TbTypeTemplate tbTypeTemplate : tbTypeTemplates) {
+            // 存储品牌列表[{"id":27,"text":"核弹"},{"id":29,"text":"堡垒"}]
+            redisTemplate.boundHashOps("brandList").put(tbTypeTemplate.getId(), JSON.parseArray(tbTypeTemplate.getBrandIds(), Map.class));
+            // 存储带有规格选项的规格列表
+            List<Map> specList = findSpecList(tbTypeTemplate.getId());
+            redisTemplate.boundHashOps("specList").put(tbTypeTemplate.getId(), specList);
+        }
+        System.out.println("更新了品牌列表和规格列表缓存。");
     }
 
     @Override
@@ -131,11 +153,8 @@ public class TypeTemplateServiceImpl implements TypeTemplateService {
             TbSpecificationOptionExample.Criteria criteria = example.createCriteria();
             criteria.andSpecIdEqualTo(new Long((Integer) map.get("id")));
             List<TbSpecificationOption> tbSpecificationOptions = specificationOptionMapper.selectByExample(example);
-
             map.put("options", tbSpecificationOptions);
-
         }
-
         return mapList;
     }
 }
