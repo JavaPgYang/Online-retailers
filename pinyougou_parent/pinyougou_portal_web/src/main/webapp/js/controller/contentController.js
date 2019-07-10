@@ -8,6 +8,10 @@ app.controller("contentController", function ($scope, contentService) {
         contentService.findByCategoryId(categoryId).success(function (response) {
             $scope.contentList[categoryId] = response;
         })
-    }
+    };
 
+    // 搜索跳转传递搜索内容
+    $scope.search = function () {
+        location.href = "http://localhost:9104/#?keywords=" + $scope.keywords;
+    }
 });

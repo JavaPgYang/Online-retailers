@@ -5,6 +5,7 @@ import com.pinyougou.pojo.TbItem;
 import com.pinyougou.search.service.ItemSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.solr.core.SolrTemplate;
 import org.springframework.data.solr.core.query.*;
@@ -45,6 +46,21 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         return map;
     }
 
+    @Override
+    public void saveList(List list) {
+        solrTemplate.saveBeans(list);
+        solrTemplate.commit();
+    }
+
+    @Override
+    public void deleList(List ids) {
+        SolrDataQuery query = new SimpleQuery();
+        Criteria criteria = new Criteria("item_goodsid").in(ids);
+        query.addCriteria(criteria);
+        solrTemplate.delete(query);
+        solrTemplate.commit();
+    }
+
     /**
      * 根据关键字搜索，且高亮显示关键字，过滤查询
      *
@@ -69,8 +85,11 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         options.setSimplePostfix("</em>");// 后缀
         query.setHighlightOptions(options);
         // 关键字查询
-        Criteria criteria = new Criteria("item_keywords").is(searchMap.get("keywords"));
+        String keywords = (String) searchMap.get("keywords");
+        String s1 = keywords.replaceAll(" ", "");
+        Criteria criteria = new Criteria("item_keywords").is(s1);
         query.addCriteria(criteria);
+
 
         // 根据商品分类进行过滤
         if (!"".equals(searchMap.get("category"))) {
@@ -79,6 +98,7 @@ public class ItemSearchServiceImpl implements ItemSearchService {
             filterQuery.addCriteria(categoryCriteria);
             query.addFilterQuery(filterQuery);
         }
+
         // 根据品牌进行过滤
         if (!"".equals(searchMap.get("brand"))) {
             FilterQuery filterQuery = new SimpleFilterQuery();
@@ -86,6 +106,7 @@ public class ItemSearchServiceImpl implements ItemSearchService {
             filterQuery.addCriteria(brandCriteria);
             query.addFilterQuery(filterQuery);
         }
+
         // 根据规格过滤
         if (searchMap.get("spec") != null) {
             Map<String, String> spec = (Map<String, String>) searchMap.get("spec");
@@ -94,6 +115,57 @@ public class ItemSearchServiceImpl implements ItemSearchService {
                 Criteria specCriteria = new Criteria("item_spec_" + key).is(spec.get(key));
                 filterQuery.addCriteria(specCriteria);
                 query.addFilterQuery(filterQuery);
+            }
+        }
+
+        // 按照价格进行过滤
+        if (!"".equals(searchMap.get("price"))) {
+            String priceStr = (String) searchMap.get("price");
+            String[] price = priceStr.split("-");
+            // 判断最低价格不等于0的时候，再过滤大于最低价格
+            if (!"0".equals(price[0])) {
+                FilterQuery filterQuery = new SimpleFilterQuery();
+                Criteria priceCriteria = new Criteria("item_price").greaterThanEqual(price[0]);
+                filterQuery.addCriteria(priceCriteria);
+                query.addFilterQuery(filterQuery);
+            }
+            // 判断最高价格不等于*的时候，再过滤小于最高价格
+            if (!"*".equals(price[1])) {
+                FilterQuery filterQuery = new SimpleFilterQuery();
+                Criteria priceCriteria = new Criteria("item_price").lessThanEqual(price[1]);
+                filterQuery.addCriteria(priceCriteria);
+                query.addFilterQuery(filterQuery);
+            }
+        }
+
+        // 分页功能
+        /*
+        页面应该传递的值：
+            当前页（pageNo），每页记录数（pageSize）
+        后端应该返回的值：
+            总页数（totalPages），总记录数（total）
+         */
+        Integer pageNo = (Integer) searchMap.get("pageNo");
+        if (pageNo == null) {
+            pageNo = 1;
+        }
+        Integer pageSize = (Integer) searchMap.get("pageSize");
+        if (pageSize == null) {
+            pageSize = 20;
+        }
+        // 设置分页的起始索引    当前页码-1乘以每页记录数   例：当前第二页，每页20条，起始索引20
+        query.setOffset((pageNo - 1) * pageSize);
+        query.setRows(pageSize);
+
+        // 排序功能
+        if (!"".equals(searchMap.get("sort"))) {
+            if ("ASC".equals(searchMap.get("sort"))) {
+                Sort sort = new Sort(Sort.Direction.ASC,"item_" + searchMap.get("sortFiled"));
+                query.addSort(sort);
+            }
+            if ("DESC".equals(searchMap.get("sort"))) {
+                Sort sort = new Sort(Sort.Direction.DESC,"item_" + searchMap.get("sortFiled"));
+                query.addSort(sort);
             }
         }
 
@@ -114,7 +186,11 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         }
 
         map.put("rows", tbItems.getContent());
-
+        // 返回分页结果数据
+        // 总页数
+        map.put("totalPages", tbItems.getTotalPages());
+        // 总记录数
+        map.put("total", tbItems.getTotalElements());
         return map;
     }
 
@@ -173,6 +249,7 @@ public class ItemSearchServiceImpl implements ItemSearchService {
         }
         return map;
     }
+
 
 
 }

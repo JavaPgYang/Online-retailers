@@ -1,8 +1,11 @@
 package com.pinyougou.manager.controller;
 
+import java.util.Arrays;
 import java.util.List;
 
+import com.pinyougou.pojo.TbItem;
 import com.pinyougou.pojogroup.Goods;
+import com.pinyougou.search.service.ItemSearchService;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +27,8 @@ public class GoodsController {
 
     @Reference
     private GoodsService goodsService;
+    @Reference
+    private ItemSearchService searchService;
 
     /**
      * 返回全部列表
@@ -85,6 +90,10 @@ public class GoodsController {
     public Result delete(Long[] ids) {
         try {
             goodsService.delete(ids);
+
+            // 删除spu商品，同时删除索引库中的sku信息
+            searchService.deleList(Arrays.asList(ids));
+
             return new Result(true, "删除成功");
         } catch (Exception e) {
             e.printStackTrace();
@@ -117,6 +126,18 @@ public class GoodsController {
         Result result = null;
         try {
             goodsService.updateAuditStatus(goodsId, status);
+
+            // 审核通过时，更新索引库
+            if ("1".equals(status)) {
+                // 根据spuID查询出所有sku列表
+                List<TbItem> tbItems = goodsService.findItemListByGoodsIdandStatus(goodsId, status);
+                if (tbItems.size() > 0) {
+                    searchService.saveList(tbItems);
+                } else {
+                    System.out.println("没有sku商品。");
+                }
+            }
+
             result = new Result(true, "成功");
         } catch (Exception e) {
             e.printStackTrace();
