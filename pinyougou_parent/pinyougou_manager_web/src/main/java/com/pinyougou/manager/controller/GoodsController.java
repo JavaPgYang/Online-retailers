@@ -3,6 +3,7 @@ package com.pinyougou.manager.controller;
 import java.util.Arrays;
 import java.util.List;
 
+import com.pinyougou.page.service.ItemPageService;
 import com.pinyougou.pojo.TbItem;
 import com.pinyougou.pojogroup.Goods;
 import com.pinyougou.search.service.ItemSearchService;
@@ -27,8 +28,12 @@ public class GoodsController {
 
     @Reference
     private GoodsService goodsService;
+
     @Reference
     private ItemSearchService searchService;
+
+    @Reference(timeout = 40000)
+    private ItemPageService pageService;
 
     /**
      * 返回全部列表
@@ -137,6 +142,10 @@ public class GoodsController {
                     System.out.println("没有sku商品。");
                 }
             }
+            // 审核通过时，生成静态html
+            for (Long id : goodsId) {
+                pageService.genItemPage(id);
+            }
 
             result = new Result(true, "成功");
         } catch (Exception e) {
@@ -144,6 +153,16 @@ public class GoodsController {
             result = new Result(false, "失败");
         }
         return result;
+    }
+
+    /**
+     * 生成静态页，测试
+     *
+     * @param goodsId
+     */
+    @RequestMapping("/genHtml")
+    public void genHtml(Long goodsId) {
+        pageService.genItemPage(goodsId);
     }
 
 }
