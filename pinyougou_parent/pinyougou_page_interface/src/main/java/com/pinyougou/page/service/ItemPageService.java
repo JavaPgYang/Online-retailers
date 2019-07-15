@@ -12,4 +12,11 @@ public interface ItemPageService {
      * @return 是否成功
      */
     boolean genItemPage(Long goodsId);
+
+    /**
+     * 循环删除商品详细页
+     *
+     * @param goodsIds
+     */
+    void deleteItemPage(Long[] goodsIds);
 }

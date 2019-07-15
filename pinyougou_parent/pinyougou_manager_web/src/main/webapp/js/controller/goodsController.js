@@ -92,7 +92,7 @@ app.controller('goodsController', function ($scope, $controller, goodsService, i
 
     // 审核商品
     $scope.updateAuditStatus = function (status) {
-        goodsService.updateAuditStatus($scope.selectIds,status).success(function (response) {
+        goodsService.updateAuditStatus($scope.selectIds, status).success(function (response) {
             if (response.success) {
                 $scope.reloadList();
                 $scope.selectIds = [];

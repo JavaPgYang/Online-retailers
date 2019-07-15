@@ -1,6 +1,5 @@
 package com.pinyougou.page.service.impl;
 
-import com.alibaba.dubbo.config.annotation.Service;
 import com.pinyougou.mapper.TbGoodsDescMapper;
 import com.pinyougou.mapper.TbGoodsMapper;
 import com.pinyougou.mapper.TbItemCatMapper;
@@ -14,6 +13,7 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfig;
 
 import java.io.File;
@@ -89,6 +89,41 @@ public class ItemPageServiceImpl implements ItemPageService {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    @Override
+    public void deleteItemPage(Long[] goodsIds) {
+
+        for (Long goodsId : goodsIds) {
+            // 读取SKU列表
+            TbItemExample example = new TbItemExample();
+            TbItemExample.Criteria criteria = example.createCriteria();
+            criteria.andGoodsIdEqualTo(goodsId);
+            List<TbItem> itemList = itemMapper.selectByExample(example);
+            for (TbItem item : itemList) {
+                try {
+                    File file = new File(filepath + item.getId() + ".html");
+                    boolean delete = file.delete();
+                    if (delete) {
+                        System.out.println(item.getId() + ".html：删除成功");
+                    } else {
+                        System.out.println(item.getId() + ".html：删除失败");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("没有详细信息！！！！！！");
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        String[] ids=new String[]{"1369299.html","1369300.html","1369301.html","1369302.html"};
+        for (String id : ids) {
+            File file = new File("E:\\JetBrains\\Project\\pinyougou_parent\\pinyougou_page_web\\src\\main\\webapp\\"+id);
+            boolean delete = file.delete();
+            System.out.println(delete);
         }
     }
 }

@@ -3,10 +3,12 @@ package com.pinyougou.manager.controller;
 import java.util.Arrays;
 import java.util.List;
 
-import com.pinyougou.page.service.ItemPageService;
+import com.alibaba.fastjson.JSON;
 import com.pinyougou.pojo.TbItem;
 import com.pinyougou.pojogroup.Goods;
-import com.pinyougou.search.service.ItemSearchService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.MessageCreator;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +18,11 @@ import com.pinyougou.sellergoods.service.GoodsService;
 
 import entity.PageResult;
 import entity.Result;
+
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.Session;
 
 /**
  * controller
@@ -29,11 +36,20 @@ public class GoodsController {
     @Reference
     private GoodsService goodsService;
 
-    @Reference
-    private ItemSearchService searchService;
+    @Autowired
+    private JmsTemplate jmsTemplate;
 
-    @Reference(timeout = 40000)
-    private ItemPageService pageService;
+    @Autowired
+    private Destination queueTextDestination;   // 添加索引库
+
+    @Autowired
+    private Destination queueDeleteDestination; // 删除索引库
+
+    @Autowired
+    private Destination topicTextDestination;   // 生成静态页
+
+    @Autowired
+    private Destination topicDeletePageDestination; // 删除静态页
 
     /**
      * 返回全部列表
@@ -92,12 +108,26 @@ public class GoodsController {
      * @return
      */
     @RequestMapping("/delete")
-    public Result delete(Long[] ids) {
+    public Result delete(final Long[] ids) {
         try {
             goodsService.delete(ids);
 
             // 删除spu商品，同时删除索引库中的sku信息
-            searchService.deleList(Arrays.asList(ids));
+            //searchService.deleList(Arrays.asList(ids));
+            jmsTemplate.send(queueDeleteDestination, new MessageCreator() {
+                @Override
+                public Message createMessage(Session session) throws JMSException {
+                    return session.createObjectMessage(ids);
+                }
+            });
+
+            // 删除spu，同时删除sku静态页
+            jmsTemplate.send(topicDeletePageDestination, new MessageCreator() {
+                @Override
+                public Message createMessage(Session session) throws JMSException {
+                    return session.createObjectMessage(ids);
+                }
+            });
 
             return new Result(true, "删除成功");
         } catch (Exception e) {
@@ -137,16 +167,29 @@ public class GoodsController {
                 // 根据spuID查询出所有sku列表
                 List<TbItem> tbItems = goodsService.findItemListByGoodsIdandStatus(goodsId, status);
                 if (tbItems.size() > 0) {
-                    searchService.saveList(tbItems);
+//                    searchService.saveList(tbItems);
+                    final String itemsStr = JSON.toJSONString(tbItems);
+                    jmsTemplate.send(queueTextDestination, new MessageCreator() {
+                        @Override
+                        public Message createMessage(Session session) throws JMSException {
+                            return session.createTextMessage(itemsStr);
+                        }
+                    });
                 } else {
                     System.out.println("没有sku商品。");
                 }
-            }
-            // 审核通过时，生成静态html
-            for (Long id : goodsId) {
-                pageService.genItemPage(id);
-            }
 
+                // 审核通过时，生成静态html
+                for (final Long id : goodsId) {
+                    //pageService.genItemPage(id);
+                    jmsTemplate.send(topicTextDestination, new MessageCreator() {
+                        @Override
+                        public Message createMessage(Session session) throws JMSException {
+                            return session.createTextMessage(id + "");
+                        }
+                    });
+                }
+            }
             result = new Result(true, "成功");
         } catch (Exception e) {
             e.printStackTrace();
@@ -162,7 +205,7 @@ public class GoodsController {
      */
     @RequestMapping("/genHtml")
     public void genHtml(Long goodsId) {
-        pageService.genItemPage(goodsId);
+        //pageService.genItemPage(goodsId);
     }
 
 }
