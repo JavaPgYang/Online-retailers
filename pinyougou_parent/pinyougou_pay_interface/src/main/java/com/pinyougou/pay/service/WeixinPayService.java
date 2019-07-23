@@ -21,5 +21,12 @@ public interface WeixinPayService {
      */
     Map queryPayStatus(String out_trade_no);
 
+    /**
+     * 关闭微信支付接口
+     *
+     * @param out_trade_no
+     * @return
+     */
+    Map closePay(String out_trade_no);
 
 }

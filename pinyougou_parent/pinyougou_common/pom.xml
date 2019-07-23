@@ -11,6 +11,27 @@
 
     <artifactId>pinyougou_common</artifactId>
 
+    <!--默认环境配置-->
+    <properties>
+        <env>dev</env>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <properties>
+                <env>dev</env>
+            </properties>
+        </profile>
+        <profile>
+            <id>pro</id>
+            <properties>
+                <env>pro</env>
+            </properties>
+        </profile>
+    </profiles>
+
+
     <dependencies>
         <!-- 文件上传组件 -->
         <dependency>
@@ -40,5 +61,17 @@
             <artifactId>httpclient</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <filters>
+            <filter>src\main\resources\filter\dubbo_${env}.properties</filter>
+        </filters>
+        <resources>
+            <resource>
+                <directory>src\main\resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
 
 </project>
